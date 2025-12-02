@@ -20,7 +20,7 @@
     }
     #root {
       width: 100%;
-      height: 100vh;
+      min-height: 100vh;
     }
   </style>
 </head>
@@ -30,25 +30,57 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // Update this to your deployed backend URL
     const API_BASE_URL = window.location.hostname === 'localhost' 
       ? 'http://localhost:3001' 
       : window.location.origin;
 
+    // Popular songs and playlists by genre
+    const GENRES = [
+      { name: 'Pop Hits', query: 'top pop songs 2024', emoji: '🎵' },
+      { name: 'Hip-Hop', query: 'top hip hop 2024', emoji: '🔥' },
+      { name: 'Rock', query: 'rock hits', emoji: '🎸' },
+      { name: 'R&B', query: 'top rnb 2024', emoji: '💫' },
+      { name: 'Country', query: 'country hits', emoji: '🤠' },
+      { name: 'Electronic', query: 'edm hits', emoji: '⚡' }
+    ];
+
     const SpotifyQueueApp = () => {
       const [searchQuery, setSearchQuery] = useState('');
       const [searchResults, setSearchResults] = useState([]);
+      const [trendingTracks, setTrendingTracks] = useState([]);
       const [queuedSongs, setQueuedSongs] = useState([]);
       const [isSearching, setIsSearching] = useState(false);
+      const [isLoadingTrending, setIsLoadingTrending] = useState(true);
       const [feedback, setFeedback] = useState({ message: '', type: '' });
+      const [activeView, setActiveView] = useState('trending'); // 'trending', 'search', 'genre'
+      const [selectedGenre, setSelectedGenre] = useState(null);
+
+      // Load trending songs on mount
+      useEffect(() => {
+        loadTrending();
+      }, []);
+
+      const loadTrending = async () => {
+        setIsLoadingTrending(true);
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/search?q=top hits 2024`);
+          const data = await response.json();
+          setTrendingTracks(data.tracks || []);
+        } catch (error) {
+          console.error('Failed to load trending:', error);
+        }
+        setIsLoadingTrending(false);
+      };
 
       const searchSpotify = async (query) => {
         if (!query.trim()) {
           setSearchResults([]);
+          setActiveView('trending');
           return;
         }
 
         setIsSearching(true);
+        setActiveView('search');
         
         try {
           const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}`);
@@ -63,9 +95,27 @@
         setIsSearching(false);
       };
 
+      const loadGenre = async (genre) => {
+        setSelectedGenre(genre);
+        setActiveView('genre');
+        setIsSearching(true);
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(genre.query)}`);
+          const data = await response.json();
+          setSearchResults(data.tracks || []);
+        } catch (error) {
+          console.error('Failed to load genre:', error);
+        }
+        
+        setIsSearching(false);
+      };
+
       useEffect(() => {
         const timer = setTimeout(() => {
-          searchSpotify(searchQuery);
+          if (searchQuery) {
+            searchSpotify(searchQuery);
+          }
         }, 500);
 
         return () => clearTimeout(timer);
@@ -90,12 +140,107 @@
           
           setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
         } catch (error) {
-          setFeedback({ message: error.message || 'Failed to add song', type: 'error' });
-          setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
+          setFeedback({ message: error.message || 'Failed to add song. Make sure Spotify is playing!', type: 'error' });
+          setTimeout(() => setFeedback({ message: '', type: '' }), 4000);
         }
       };
 
       const isQueued = (trackId) => queuedSongs.some(song => song.id === trackId);
+
+      const TrackList = ({ tracks, title }) => (
+        <div>
+          {title && (
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              marginBottom: '15px',
+              color: '#fff'
+            }}>{title}</h3>
+          )}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            {tracks.map((track, index) => (
+              <div
+                key={track.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '15px 20px',
+                  borderBottom: index < tracks.length - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                  transition: 'background 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%)',
+                  marginRight: '15px',
+                  flexShrink: 0,
+                  overflow: 'hidden'
+                }}>
+                  {track.albumArt && (
+                    <img src={track.albumArt} alt={track.album} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    marginBottom: '4px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {track.name}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#888',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {track.artist}
+                  </div>
+                </div>
+                {isQueued(track.id) ? (
+                  <div style={{
+                    color: '#1db954',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}>
+                    ✓ Queued
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => addToQueue(track)}
+                    style={{
+                      background: 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '10px 20px',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontFamily: "'Outfit', sans-serif"
+                    }}
+                  >
+                    Add
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
 
       return (
         <div style={{
@@ -103,7 +248,8 @@
           background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
           color: '#ffffff',
           fontFamily: "'Outfit', sans-serif",
-          padding: '20px'
+          padding: '20px',
+          paddingBottom: '80px'
         }}>
           <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
           
@@ -167,9 +313,10 @@
               gap: '10px',
               boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
               zIndex: 1000,
-              animation: 'slideDown 0.3s ease-out'
+              animation: 'slideDown 0.3s ease-out',
+              maxWidth: '90%'
             }}>
-              <span style={{ fontWeight: '600' }}>{feedback.message}</span>
+              <span style={{ fontWeight: '600', fontSize: '14px' }}>{feedback.message}</span>
             </div>
           )}
 
@@ -196,7 +343,7 @@
               </div>
               <input
                 type="text"
-                placeholder="Search for songs, artists, or albums..."
+                placeholder="Search for songs or artists..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -214,8 +361,43 @@
               />
             </div>
 
-            {/* Search Results */}
-            {isSearching && (
+            {/* Genre Pills */}
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              overflowX: 'auto',
+              marginBottom: '30px',
+              paddingBottom: '10px'
+            }}>
+              {GENRES.map((genre) => (
+                <button
+                  key={genre.name}
+                  onClick={() => loadGenre(genre)}
+                  style={{
+                    background: selectedGenre?.name === genre.name 
+                      ? 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)'
+                      : 'rgba(255, 255, 255, 0.05)',
+                    color: 'white',
+                    border: selectedGenre?.name === genre.name 
+                      ? 'none'
+                      : '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '12px 20px',
+                    borderRadius: '25px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    fontFamily: "'Outfit', sans-serif",
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {genre.emoji} {genre.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Content Area */}
+            {isSearching || isLoadingTrending ? (
               <div style={{
                 textAlign: 'center',
                 padding: '40px',
@@ -230,93 +412,11 @@
                   margin: '0 auto 15px',
                   animation: 'spin 1s linear infinite'
                 }} />
-                <p>Searching...</p>
+                <p>Loading...</p>
               </div>
-            )}
-
-            {!isSearching && searchResults.length > 0 && (
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '20px',
-                overflow: 'hidden',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}>
-                {searchResults.map((track, index) => (
-                  <div
-                    key={track.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '15px 20px',
-                      borderBottom: index < searchResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none'
-                    }}
-                  >
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%)',
-                      marginRight: '15px',
-                      flexShrink: 0,
-                      overflow: 'hidden'
-                    }}>
-                      {track.albumArt && (
-                        <img src={track.albumArt} alt={track.album} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        marginBottom: '4px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {track.name}
-                      </div>
-                      <div style={{
-                        fontSize: '14px',
-                        color: '#888',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {track.artist}
-                      </div>
-                    </div>
-                    {isQueued(track.id) ? (
-                      <div style={{
-                        color: '#1db954',
-                        fontSize: '14px',
-                        fontWeight: '600'
-                      }}>
-                        ✓ Queued
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => addToQueue(track)}
-                        style={{
-                          background: 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)',
-                          color: 'white',
-                          border: 'none',
-                          padding: '10px 20px',
-                          borderRadius: '20px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          fontFamily: "'Outfit', sans-serif"
-                        }}
-                      >
-                        Add
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!isSearching && searchQuery && searchResults.length === 0 && (
+            ) : activeView === 'search' && searchResults.length > 0 ? (
+              <TrackList tracks={searchResults} title="Search Results" />
+            ) : activeView === 'search' && searchQuery && searchResults.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '60px 20px',
@@ -325,20 +425,10 @@
                 <p style={{ fontSize: '16px' }}>No results found</p>
                 <p style={{ fontSize: '14px', marginTop: '5px' }}>Try a different search term</p>
               </div>
-            )}
-
-            {!searchQuery && (
-              <div style={{
-                textAlign: 'center',
-                padding: '60px 20px',
-                color: '#666'
-              }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ margin: '0 auto 15px', opacity: 0.3 }}>
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Search for music</p>
-                <p style={{ fontSize: '14px' }}>Find and queue your favorite songs for the ride</p>
-              </div>
+            ) : activeView === 'genre' && searchResults.length > 0 ? (
+              <TrackList tracks={searchResults} title={`${selectedGenre?.emoji} ${selectedGenre?.name}`} />
+            ) : (
+              <TrackList tracks={trendingTracks} title="🔥 Trending Now" />
             )}
 
             {/* Footer */}
@@ -368,6 +458,25 @@
             
             @keyframes spin {
               to { transform: rotate(360deg); }
+            }
+
+            /* Hide scrollbar but keep functionality */
+            div::-webkit-scrollbar {
+              height: 6px;
+            }
+            
+            div::-webkit-scrollbar-track {
+              background: rgba(255, 255, 255, 0.05);
+              border-radius: 10px;
+            }
+            
+            div::-webkit-scrollbar-thumb {
+              background: rgba(29, 185, 84, 0.5);
+              border-radius: 10px;
+            }
+            
+            div::-webkit-scrollbar-thumb:hover {
+              background: rgba(29, 185, 84, 0.7);
             }
           `}</style>
         </div>
