@@ -319,6 +319,11 @@ function formatDuration(ms) {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+// Root route - redirect to passenger page
+app.get('/', (req, res) => {
+  res.redirect('/passenger.html');
+});
+
 // Serve static files (passenger.html) - must come after API routes
 app.use(express.static(__dirname));
 
