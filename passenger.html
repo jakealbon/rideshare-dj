@@ -34,67 +34,67 @@
       ? 'http://localhost:3001' 
       : window.location.origin;
 
-    // Verified Spotify playlist IDs - using Today's Top Hits and other major playlists
+    // Curated lists of popular artists/songs that search well
     const CHARTS = [
       { 
-        name: 'Today\'s Top Hits', 
-        id: '37i9dQZF1DXcBWIGoYBM5M', 
+        name: 'Today\'s Hits', 
+        query: 'Billie Eilish Dua Lipa Drake', 
         emoji: '🔥', 
         description: 'The hottest tracks right now'
       },
       { 
-        name: 'Hot Hits Australia', 
-        id: '37i9dQZF1DXbLMw3ry7d7k', 
-        emoji: '🇦🇺', 
-        description: 'Australia\'s biggest hits'
+        name: 'Pop Bangers', 
+        query: 'Taylor Swift Ariana Grande The Weeknd', 
+        emoji: '🎵', 
+        description: 'Biggest pop hits'
       },
       { 
-        name: 'RapCaviar', 
-        id: '37i9dQZF1DX0XUsuxWHRQd', 
+        name: 'Hip-Hop/Rap', 
+        query: 'Drake Travis Scott Kendrick Lamar', 
         emoji: '🎤', 
-        description: 'New music from Drake, Future, and more'
+        description: 'Top rap hits'
       },
       { 
-        name: 'Hot Country', 
-        id: '37i9dQZF1DX1lVhptIYRda', 
-        emoji: '🤠', 
-        description: 'Today\'s top country'
+        name: 'Aussie Hits', 
+        query: 'Tones And I Vance Joy Sia 5SOS', 
+        emoji: '🇦🇺', 
+        description: 'Australian favorites'
       },
       { 
         name: 'Rock Classics', 
-        id: '37i9dQZF1DWXRqgorJj26U', 
+        query: 'Queen AC/DC Guns N Roses', 
         emoji: '🎸', 
-        description: 'Rock legends & epic songs'
+        description: 'Legendary rock'
       },
       { 
-        name: 'Viva Latino', 
-        id: '37i9dQZF1DX10zKzsJ2jva', 
+        name: 'Country', 
+        query: 'Morgan Wallen Luke Combs Zach Bryan', 
+        emoji: '🤠', 
+        description: 'Country hits'
+      },
+      { 
+        name: 'Latin Hits', 
+        query: 'Bad Bunny Karol G Peso Pluma', 
         emoji: '💃', 
-        description: 'Today\'s top Latin hits'
+        description: 'Latin & reggaeton'
       },
       { 
-        name: 'Are & Be', 
-        id: '37i9dQZF1DX4SBhb3fqCJd', 
+        name: 'R&B Vibes', 
+        query: 'SZA Brent Faiyaz Summer Walker', 
         emoji: '💫', 
-        description: 'The best of R&B'
+        description: 'Smooth R&B'
       },
       { 
-        name: 'mint', 
-        id: '37i9dQZF1DX4dyzvuaRJ0n', 
+        name: 'EDM/Dance', 
+        query: 'Calvin Harris David Guetta Tiesto', 
         emoji: '⚡', 
-        description: 'Chill electronic vibes'
+        description: 'Electronic bangers'
       },
       { 
-        name: 'Chill Hits', 
-        id: '37i9dQZF1DX4WYpdgoIcn6', 
+        name: 'Chill Vibes', 
+        query: 'Khalid Daniel Caesar Frank Ocean', 
         emoji: '😌', 
-        description: 'Kick back to these mellow tracks'
-      },
-      { 
-        name: 'Party Playlist', 
-        id: '37i9dQZF1DXaXB8fQg7xif', 
-        emoji: '🎉', 
-        description: 'Party hits for good vibes'
+        description: 'Relaxed vibes'
       }
     ];
 
@@ -109,7 +109,7 @@
       const [activeView, setActiveView] = useState('chart');
       const [selectedChart, setSelectedChart] = useState(CHARTS[0]);
 
-      // Load Today's Top Hits on mount
+      // Load Today's Hits on mount
       useEffect(() => {
         loadChart(CHARTS[0]);
       }, []);
@@ -121,19 +121,13 @@
         setSearchQuery(''); // Clear search
         
         try {
-          const response = await fetch(`${API_BASE_URL}/api/playlist/${chart.id}?limit=40`);
+          const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(chart.query)}`);
           const data = await response.json();
-          
-          if (data.error) {
-            throw new Error(data.error);
-          }
-          
           setChartTracks(data.tracks || []);
         } catch (error) {
           console.error('Failed to load chart:', error);
-          setFeedback({ message: 'Failed to load playlist', type: 'error' });
+          setFeedback({ message: 'Failed to load tracks', type: 'error' });
           setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
-          // Fallback to empty
           setChartTracks([]);
         }
         
@@ -248,17 +242,6 @@
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div style={{
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    color: index < 3 ? '#1db954' : '#666',
-                    width: '30px',
-                    flexShrink: 0,
-                    fontFamily: "'Space Mono', monospace",
-                    textAlign: 'center'
-                  }}>
-                    {index + 1}
-                  </div>
                   <div style={{
                     width: '55px',
                     height: '55px',
@@ -465,14 +448,14 @@
             }}>
               {CHARTS.map((chart) => (
                 <button
-                  key={chart.id}
+                  key={chart.name}
                   onClick={() => loadChart(chart)}
                   style={{
-                    background: selectedChart.id === chart.id 
+                    background: selectedChart.name === chart.name 
                       ? 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)'
                       : 'rgba(255, 255, 255, 0.05)',
                     color: 'white',
-                    border: selectedChart.id === chart.id 
+                    border: selectedChart.name === chart.name 
                       ? 'none'
                       : '1px solid rgba(255, 255, 255, 0.1)',
                     padding: '10px 16px',
