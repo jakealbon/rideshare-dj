@@ -246,34 +246,15 @@ app.get('/api/playlists', async (req, res) => {
   try {
     await ensureValidToken();
 
-    const response = await axios.get('https://api.spotify.com/v1/me/playlists', {
-      headers: {
-        'Authorization': `Bearer ${driverAccessToken}`
-      },
-      params: {
-        limit: 50
-      }
-    });
+    // Hardcoded Top Songs playlists
+    const wrappedPlaylists = [
+      { id: '37i9dQZF1FoCZMBtkTSnst', name: 'Your Top Songs 2024', year: '2024' },
+      { id: '37i9dQZF1FagGZ24kykpqp', name: 'Your Top Songs 2023', year: '2023' },
+      { id: '37i9dQZF1F0sijgNaJdgit', name: 'Your Top Songs 2022', year: '2022' },
+      { id: '37i9dQZF1EUMDoJuT8yJsl', name: 'Your Top Songs 2021', year: '2021' }
+    ];
 
-    console.log('📋 Total playlists found:', response.data.items.length);
-    console.log('📋 All playlist names:', response.data.items.map(p => p.name));
-
-    // Filter for "Your Top Songs" playlists - try multiple patterns
-    const wrappedPlaylists = response.data.items
-      .filter(playlist => {
-        const name = playlist.name.toLowerCase();
-        return name.includes('your top songs') || 
-               name.includes('top songs') ||
-               name.includes('wrapped');
-      })
-      .map(playlist => ({
-        id: playlist.id,
-        name: playlist.name,
-        year: playlist.name.match(/\d{4}/)?.[0] || 'Unknown'
-      }))
-      .sort((a, b) => b.year - a.year); // Most recent first
-
-    console.log('⭐ Filtered wrapped playlists:', wrappedPlaylists);
+    console.log('⭐ Returning hardcoded wrapped playlists:', wrappedPlaylists);
 
     res.json({ playlists: wrappedPlaylists });
   } catch (error) {
