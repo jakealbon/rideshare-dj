@@ -204,7 +204,7 @@ app.get('/api/search', async (req, res) => {
 // Fetch playlist tracks (for Top 50, genre charts, etc.)
 app.get('/api/playlist/:playlistId', async (req, res) => {
   const { playlistId } = req.params;
-  const limit = req.query.limit || 50;
+  const limit = req.query.limit || 20;
 
   try {
     await ensureValidToken();
