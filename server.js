@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
 // Store the driver's access token (in production, use a database)
 let driverAccessToken = null;
 let driverRefreshToken = null;
@@ -197,6 +198,46 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// Fetch playlist tracks (for Top 50, genre charts, etc.)
+app.get('/api/playlist/:playlistId', async (req, res) => {
+  const { playlistId } = req.params;
+  const limit = req.query.limit || 50;
+
+  try {
+    await ensureValidToken();
+
+    const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+      headers: {
+        'Authorization': `Bearer ${driverAccessToken}`
+      },
+      params: {
+        limit: limit,
+        fields: 'items(track(id,uri,name,artists,album(name,images),duration_ms))'
+      }
+    });
+
+    const tracks = response.data.items
+      .filter(item => item.track) // Remove null tracks
+      .map(item => ({
+        id: item.track.id,
+        uri: item.track.uri,
+        name: item.track.name,
+        artist: item.track.artists.map(a => a.name).join(', '),
+        album: item.track.album.name,
+        albumArt: item.track.album.images[0]?.url,
+        duration: formatDuration(item.track.duration_ms)
+      }));
+
+    res.json({ tracks });
+  } catch (error) {
+    console.error('Playlist fetch error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch playlist',
+      message: error.message 
+    });
+  }
+});
+
 // Add track to queue
 app.post('/api/queue', async (req, res) => {
   const { trackId } = req.body;
@@ -272,13 +313,14 @@ app.get('/api/status', (req, res) => {
 });
 
 // Helper function to format duration
-// Serve static files (passenger.html) - must come after API routes
-app.use(express.static(__dirname));
 function formatDuration(ms) {
   const minutes = Math.floor(ms / 60000);
   const seconds = Math.floor((ms % 60000) / 1000);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
+
+// Serve static files (passenger.html) - must come after API routes
+app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
   console.log(`🎵 Spotify Queue Server running on port ${PORT}`);
