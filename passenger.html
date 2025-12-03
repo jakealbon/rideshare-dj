@@ -34,22 +34,18 @@
       ? 'http://localhost:3001' 
       : window.location.origin;
 
-    // Spotify's official playlist IDs
-const PLAYLISTS = {
-  topGlobal: '37i9dQZEVXbMDoHDwVN2tF', // Top 50 Global
-    };
-
+    // Popular search queries for different genres/charts
     const CHARTS = [
-      { name: 'Top 50 Global', id: 'topGlobal', emoji: '🌍', description: 'Most played songs worldwide' },
-      { name: 'Top 50 USA', id: 'topUSA', emoji: '🇺🇸', description: 'Most played in United States' },
-      { name: 'Viral Hits', id: 'viral', emoji: '🔥', description: 'Trending viral tracks' },
-      { name: 'Pop Hits', id: 'popHits', emoji: '🎵', description: 'Today\'s biggest pop songs' },
-      { name: 'Hip-Hop', id: 'hipHop', emoji: '🎤', description: 'Top rap and hip-hop' },
-      { name: 'Rock', id: 'rock', emoji: '🎸', description: 'Classic and modern rock' },
-      { name: 'R&B', id: 'rnb', emoji: '💫', description: 'Soul and R&B vibes' },
-      { name: 'Country', id: 'country', emoji: '🤠', description: 'Country favorites' },
-      { name: 'Latin', id: 'latin', emoji: '💃', description: 'Latin and reggaeton hits' },
-      { name: 'Electronic', id: 'electronic', emoji: '⚡', description: 'EDM and electronic' }
+      { name: 'Top Hits 2024', query: 'top hits 2024', emoji: '🔥', description: 'Most popular songs right now' },
+      { name: 'Pop Hits', query: 'top pop 2024', emoji: '🎵', description: 'Biggest pop songs' },
+      { name: 'Hip-Hop', query: 'top rap hip hop 2024', emoji: '🎤', description: 'Top rap and hip-hop' },
+      { name: 'Rock', query: 'rock hits classic', emoji: '🎸', description: 'Rock favorites' },
+      { name: 'R&B', query: 'top rnb soul 2024', emoji: '💫', description: 'R&B and soul vibes' },
+      { name: 'Country', query: 'country hits 2024', emoji: '🤠', description: 'Country favorites' },
+      { name: 'Dance/EDM', query: 'edm dance hits', emoji: '⚡', description: 'Electronic and dance' },
+      { name: 'Latin', query: 'latin reggaeton 2024', emoji: '💃', description: 'Latin and reggaeton' },
+      { name: 'Chill Vibes', query: 'chill relaxing music', emoji: '😌', description: 'Relaxed background music' },
+      { name: 'Party Mix', query: 'party dance upbeat', emoji: '🎉', description: 'Upbeat party songs' }
     ];
 
     const SpotifyQueueApp = () => {
@@ -63,7 +59,7 @@ const PLAYLISTS = {
       const [activeView, setActiveView] = useState('chart');
       const [selectedChart, setSelectedChart] = useState(CHARTS[0]);
 
-      // Load Top 50 Global on mount
+      // Load top hits on mount
       useEffect(() => {
         loadChart(CHARTS[0]);
       }, []);
@@ -75,8 +71,7 @@ const PLAYLISTS = {
         setSearchQuery(''); // Clear search
         
         try {
-          const playlistId = PLAYLISTS[chart.id];
-          const response = await fetch(`${API_BASE_URL}/api/playlist/${playlistId}?limit=40`);
+          const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(chart.query)}`);
           const data = await response.json();
           setChartTracks(data.tracks || []);
         } catch (error) {
@@ -147,7 +142,7 @@ const PLAYLISTS = {
 
       const isQueued = (trackId) => queuedSongs.some(song => song.id === trackId);
 
-      const TrackList = ({ tracks, title, showRank = false }) => (
+      const TrackList = ({ tracks, title }) => (
         <div>
           {title && (
             <div style={{ marginBottom: '20px' }}>
@@ -174,102 +169,100 @@ const PLAYLISTS = {
             overflow: 'hidden',
             border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
-            {tracks.map((track, index) => (
-              <div
-                key={`${track.id}-${index}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  borderBottom: index < tracks.length - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
-                  transition: 'background 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                {showRank && (
-                  <div style={{
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    color: index < 3 ? '#1db954' : '#666',
-                    width: '35px',
-                    flexShrink: 0,
-                    fontFamily: "'Space Mono', monospace"
-                  }}>
-                    {index + 1}
-                  </div>
-                )}
-                <div style={{
-                  width: '55px',
-                  height: '55px',
-                  borderRadius: '6px',
-                  background: 'linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%)',
-                  marginRight: '12px',
-                  flexShrink: 0,
-                  overflow: 'hidden'
-                }}>
-                  {track.albumArt && (
-                    <img src={track.albumArt} alt={track.album} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '15px',
-                    fontWeight: '600',
-                    marginBottom: '3px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {track.name}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#888',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {track.artist}
-                  </div>
-                </div>
-                {isQueued(track.id) ? (
-                  <div style={{
-                    color: '#1db954',
-                    fontSize: '13px',
-                    fontWeight: '600',
+            {tracks.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: '#666'
+              }}>
+                <p>No tracks found</p>
+              </div>
+            ) : (
+              tracks.map((track, index) => (
+                <div
+                  key={`${track.id}-${index}`}
+                  style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px'
+                    padding: '12px 16px',
+                    borderBottom: index < tracks.length - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                    transition: 'background 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{
+                    width: '55px',
+                    height: '55px',
+                    borderRadius: '6px',
+                    background: 'linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%)',
+                    marginRight: '12px',
+                    flexShrink: 0,
+                    overflow: 'hidden'
                   }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Queued
+                    {track.albumArt && (
+                      <img src={track.albumArt} alt={track.album} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    )}
                   </div>
-                ) : (
-                  <button
-                    onClick={() => addToQueue(track)}
-                    style={{
-                      background: 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 18px',
-                      borderRadius: '18px',
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      marginBottom: '3px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {track.name}
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      color: '#888',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {track.artist}
+                    </div>
+                  </div>
+                  {isQueued(track.id) ? (
+                    <div style={{
+                      color: '#1db954',
                       fontSize: '13px',
                       fontWeight: '600',
-                      cursor: 'pointer',
-                      fontFamily: "'Outfit', sans-serif",
-                      transition: 'transform 0.2s ease'
-                    }}
-                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    Add
-                  </button>
-                )}
-              </div>
-            ))}
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Queued
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => addToQueue(track)}
+                      style={{
+                        background: 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 18px',
+                        borderRadius: '18px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        fontFamily: "'Outfit', sans-serif",
+                        transition: 'transform 0.2s ease'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      Add
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       );
@@ -404,14 +397,14 @@ const PLAYLISTS = {
             }}>
               {CHARTS.map((chart) => (
                 <button
-                  key={chart.id}
+                  key={chart.name}
                   onClick={() => loadChart(chart)}
                   style={{
-                    background: selectedChart.id === chart.id 
+                    background: selectedChart.name === chart.name 
                       ? 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)'
                       : 'rgba(255, 255, 255, 0.05)',
                     color: 'white',
-                    border: selectedChart.id === chart.id 
+                    border: selectedChart.name === chart.name 
                       ? 'none'
                       : '1px solid rgba(255, 255, 255, 0.1)',
                     padding: '10px 16px',
@@ -448,7 +441,7 @@ const PLAYLISTS = {
                 <p>Loading...</p>
               </div>
             ) : activeView === 'search' && searchResults.length > 0 ? (
-              <TrackList tracks={searchResults} title="Search Results" showRank={false} />
+              <TrackList tracks={searchResults} title="Search Results" />
             ) : activeView === 'search' && searchQuery && searchResults.length === 0 ? (
               <div style={{
                 textAlign: 'center',
@@ -462,7 +455,7 @@ const PLAYLISTS = {
                 <p style={{ fontSize: '14px', marginTop: '5px' }}>Try a different search term</p>
               </div>
             ) : (
-              <TrackList tracks={chartTracks} title={`${selectedChart.emoji} ${selectedChart.name}`} showRank={true} />
+              <TrackList tracks={chartTracks} title={`${selectedChart.emoji} ${selectedChart.name}`} />
             )}
 
             {/* Footer */}
