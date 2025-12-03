@@ -255,12 +255,17 @@ app.get('/api/playlists', async (req, res) => {
       }
     });
 
-    // Filter for "Your Top Songs" playlists
+    console.log('📋 Total playlists found:', response.data.items.length);
+    console.log('📋 All playlist names:', response.data.items.map(p => p.name));
+
+    // Filter for "Your Top Songs" playlists - try multiple patterns
     const wrappedPlaylists = response.data.items
-      .filter(playlist => 
-        playlist.name.includes('Your Top Songs') || 
-        playlist.name.includes('Top Songs')
-      )
+      .filter(playlist => {
+        const name = playlist.name.toLowerCase();
+        return name.includes('your top songs') || 
+               name.includes('top songs') ||
+               name.includes('wrapped');
+      })
       .map(playlist => ({
         id: playlist.id,
         name: playlist.name,
@@ -268,9 +273,11 @@ app.get('/api/playlists', async (req, res) => {
       }))
       .sort((a, b) => b.year - a.year); // Most recent first
 
+    console.log('⭐ Filtered wrapped playlists:', wrappedPlaylists);
+
     res.json({ playlists: wrappedPlaylists });
   } catch (error) {
-    console.error('Playlists fetch error:', error.response?.data || error.message);
+    console.error('❌ Playlists fetch error:', error.response?.data || error.message);
     res.status(500).json({ 
       error: 'Failed to fetch playlists',
       message: error.message 
@@ -341,43 +348,6 @@ app.get('/api/current', async (req, res) => {
   } catch (error) {
     console.error('Current track error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to get current track' });
-  }
-});
-
-// Get user's playlists (to find Wrapped playlists)
-app.get('/api/playlists', async (req, res) => {
-  try {
-    await ensureValidToken();
-
-    const response = await axios.get('https://api.spotify.com/v1/me/playlists', {
-      headers: {
-        'Authorization': `Bearer ${driverAccessToken}`
-      },
-      params: {
-        limit: 50
-      }
-    });
-
-    // Filter for "Your Top Songs" playlists
-    const wrappedPlaylists = response.data.items
-      .filter(playlist => 
-        playlist.name.includes('Your Top Songs') || 
-        playlist.name.includes('Top Songs')
-      )
-      .map(playlist => ({
-        id: playlist.id,
-        name: playlist.name,
-        year: playlist.name.match(/\d{4}/)?.[0] || 'Unknown'
-      }))
-      .sort((a, b) => b.year - a.year); // Most recent first
-
-    res.json({ playlists: wrappedPlaylists });
-  } catch (error) {
-    console.error('Playlists fetch error:', error.response?.data || error.message);
-    res.status(500).json({ 
-      error: 'Failed to fetch playlists',
-      message: error.message 
-    });
   }
 });
 
