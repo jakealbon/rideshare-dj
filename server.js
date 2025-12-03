@@ -267,15 +267,15 @@ app.get('/api/playlists', async (req, res) => {
   try {
     await ensureValidToken();
 
-    // Use Spotify's public Top 50 playlists that work globally
+    // Jake's public Top Songs playlists
     const wrappedPlaylists = [
-      { id: '37i9dQZEVXbMDoHDwVN2tF', name: 'Top 50 - Global', year: '2024' },
-      { id: '37i9dQZEVXbLp5XoPy02kN', name: 'Top 50 - Australia', year: '2024' },
-      { id: '37i9dQZF1DXcBWIGoYBM5M', name: 'Today\'s Top Hits', year: '2024' },
-      { id: '37i9dQZF1DX0XUsuxWHRQd', name: 'RapCaviar', year: '2024' }
+      { id: '37i9dQZF1FoCZMBtkTSnst', name: 'Your Top Songs 2024', year: '2024' },
+      { id: '37i9dQZF1FagGZ24kykpqp', name: 'Your Top Songs 2023', year: '2023' },
+      { id: '37i9dQZF1F0sijgNaJdgit', name: 'Your Top Songs 2022', year: '2022' },
+      { id: '37i9dQZF1EUMDoJuT8yJsl', name: 'Your Top Songs 2021', year: '2021' }
     ];
 
-    console.log('⭐ Returning public playlists:', wrappedPlaylists);
+    console.log('⭐ Returning Jake\'s public playlists:', wrappedPlaylists);
 
     res.json({ playlists: wrappedPlaylists });
   } catch (error) {
