@@ -206,8 +206,21 @@ app.get('/api/playlist/:playlistId', async (req, res) => {
   const { playlistId } = req.params;
   const limit = req.query.limit || 20;
 
+  console.log(`🎵 Fetching playlist ${playlistId} with limit ${limit}`);
+
   try {
     await ensureValidToken();
+
+    console.log(`✅ Token valid, making Spotify API request...`);
+
+    // Try getting user info first to see if we need user ID
+    const meResponse = await axios.get('https://api.spotify.com/v1/me', {
+      headers: {
+        'Authorization': `Bearer ${driverAccessToken}`
+      }
+    });
+    
+    console.log(`✅ User ID: ${meResponse.data.id}`);
 
     const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
       headers: {
@@ -215,9 +228,12 @@ app.get('/api/playlist/:playlistId', async (req, res) => {
       },
       params: {
         limit: limit,
+        market: 'AU', // Add market parameter
         fields: 'items(track(id,uri,name,artists,album(name,images),duration_ms))'
       }
     });
+
+    console.log(`✅ Spotify API response received, ${response.data.items.length} items`);
 
     const tracks = response.data.items
       .filter(item => item.track) // Remove null tracks
@@ -231,12 +247,17 @@ app.get('/api/playlist/:playlistId', async (req, res) => {
         duration: formatDuration(item.track.duration_ms)
       }));
 
+    console.log(`✅ Returning ${tracks.length} tracks`);
+
     res.json({ tracks });
   } catch (error) {
-    console.error('Playlist fetch error:', error.response?.data || error.message);
-    res.status(500).json({ 
+    console.error('❌ Playlist fetch error:', error.response?.data || error.message);
+    console.error('❌ Full error:', error);
+    console.error('❌ Status:', error.response?.status);
+    res.status(error.response?.status || 500).json({ 
       error: 'Failed to fetch playlist',
-      message: error.message 
+      message: error.response?.data?.error?.message || error.message,
+      status: error.response?.status
     });
   }
 });
@@ -246,15 +267,15 @@ app.get('/api/playlists', async (req, res) => {
   try {
     await ensureValidToken();
 
-    // Hardcoded Top Songs playlists
+    // Use Spotify's public Top 50 playlists that work globally
     const wrappedPlaylists = [
-      { id: '37i9dQZF1FoCZMBtkTSnst', name: 'Your Top Songs 2024', year: '2024' },
-      { id: '37i9dQZF1FagGZ24kykpqp', name: 'Your Top Songs 2023', year: '2023' },
-      { id: '37i9dQZF1F0sijgNaJdgit', name: 'Your Top Songs 2022', year: '2022' },
-      { id: '37i9dQZF1EUMDoJuT8yJsl', name: 'Your Top Songs 2021', year: '2021' }
+      { id: '37i9dQZEVXbMDoHDwVN2tF', name: 'Top 50 - Global', year: '2024' },
+      { id: '37i9dQZEVXbLp5XoPy02kN', name: 'Top 50 - Australia', year: '2024' },
+      { id: '37i9dQZF1DXcBWIGoYBM5M', name: 'Today\'s Top Hits', year: '2024' },
+      { id: '37i9dQZF1DX0XUsuxWHRQd', name: 'RapCaviar', year: '2024' }
     ];
 
-    console.log('⭐ Returning hardcoded wrapped playlists:', wrappedPlaylists);
+    console.log('⭐ Returning public playlists:', wrappedPlaylists);
 
     res.json({ playlists: wrappedPlaylists });
   } catch (error) {
