@@ -282,40 +282,7 @@
             gap: '10px'
           }}
         >
-          <div style={{
-            width: isMobile ? '45px' : '50px',
-            height: isMobile ? '45px' : '50px',
-            borderRadius: '6px',
-            background: 'linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%)',
-            flexShrink: 0,
-            overflow: 'hidden'
-          }}>
-            {track.albumArt && (
-              <img src={track.albumArt} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            )}
-          </div>
-          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-            <div style={{
-              fontSize: isMobile ? '14px' : '15px',
-              fontWeight: '700',
-              marginBottom: '2px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              color: '#fff'
-            }}>
-              {track.name}
-            </div>
-            <div style={{
-              fontSize: isMobile ? '12px' : '13px',
-              color: '#999',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
-              {track.artist}
-            </div>
-          </div>
+          {/* Add button on the left */}
           {isQueued(track.id) ? (
             <div style={{
               color: '#1db954',
@@ -348,6 +315,44 @@
               Add
             </button>
           )}
+          
+          {/* Album art */}
+          <div style={{
+            width: isMobile ? '45px' : '50px',
+            height: isMobile ? '45px' : '50px',
+            borderRadius: '6px',
+            background: 'linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%)',
+            flexShrink: 0,
+            overflow: 'hidden'
+          }}>
+            {track.albumArt && (
+              <img src={track.albumArt} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            )}
+          </div>
+          
+          {/* Song info - can take remaining space */}
+          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+            <div style={{
+              fontSize: isMobile ? '14px' : '15px',
+              fontWeight: '700',
+              marginBottom: '2px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              color: '#fff'
+            }}>
+              {track.name}
+            </div>
+            <div style={{
+              fontSize: isMobile ? '12px' : '13px',
+              color: '#999',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {track.artist}
+            </div>
+          </div>
         </div>
       );
 
