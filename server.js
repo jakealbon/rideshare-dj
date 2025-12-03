@@ -26,12 +26,13 @@ const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3001/callback
 // Step 1: Driver authentication - redirect to Spotify login
 app.get('/auth/login', (req, res) => {
   const scopes = [
-  'user-read-playback-state',
-  'user-modify-playback-state',
-  'user-read-currently-playing',
-  'playlist-read-private',
-  'playlist-read-collaborative'
-].join(' ');
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+    'user-top-read',
+    'playlist-read-private',
+    'playlist-read-collaborative'
+  ].join(' ');
 
   const authUrl = `https://accounts.spotify.com/authorize?` +
     `client_id=${CLIENT_ID}` +
@@ -176,7 +177,7 @@ app.get('/api/search', async (req, res) => {
       params: {
         q: query,
         type: 'track',
-        limit: 10
+        limit: 20
       }
     });
 
@@ -303,6 +304,68 @@ app.get('/api/current', async (req, res) => {
   } catch (error) {
     console.error('Current track error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to get current track' });
+  }
+});
+
+// Get user profile
+app.get('/api/me', async (req, res) => {
+  try {
+    await ensureValidToken();
+
+    const response = await axios.get('https://api.spotify.com/v1/me', {
+      headers: {
+        'Authorization': `Bearer ${driverAccessToken}`
+      }
+    });
+
+    res.json({ 
+      displayName: response.data.display_name,
+      id: response.data.id 
+    });
+  } catch (error) {
+    console.error('Profile fetch error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch profile',
+      message: error.message 
+    });
+  }
+});
+
+// Get user's top tracks
+app.get('/api/top-tracks', async (req, res) => {
+  const timeRange = req.query.time_range || 'medium_term'; // short_term, medium_term, long_term
+  const limit = req.query.limit || 50;
+
+  try {
+    await ensureValidToken();
+
+    const response = await axios.get('https://api.spotify.com/v1/me/top/tracks', {
+      headers: {
+        'Authorization': `Bearer ${driverAccessToken}`
+      },
+      params: {
+        time_range: timeRange,
+        limit: limit
+      }
+    });
+
+    const tracks = response.data.items.map(track => ({
+      id: track.id,
+      uri: track.uri,
+      name: track.name,
+      artist: track.artists.map(a => a.name).join(', '),
+      album: track.album.name,
+      albumArt: track.album.images[0]?.url,
+      duration: formatDuration(track.duration_ms)
+    }));
+
+    res.json({ tracks });
+  } catch (error) {
+    console.error('Top tracks error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch top tracks',
+      message: error.message 
+    });
   }
 });
 
