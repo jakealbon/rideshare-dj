@@ -241,6 +241,43 @@ app.get('/api/playlist/:playlistId', async (req, res) => {
   }
 });
 
+// Get user's playlists (to find Wrapped playlists)
+app.get('/api/playlists', async (req, res) => {
+  try {
+    await ensureValidToken();
+
+    const response = await axios.get('https://api.spotify.com/v1/me/playlists', {
+      headers: {
+        'Authorization': `Bearer ${driverAccessToken}`
+      },
+      params: {
+        limit: 50
+      }
+    });
+
+    // Filter for "Your Top Songs" playlists
+    const wrappedPlaylists = response.data.items
+      .filter(playlist => 
+        playlist.name.includes('Your Top Songs') || 
+        playlist.name.includes('Top Songs')
+      )
+      .map(playlist => ({
+        id: playlist.id,
+        name: playlist.name,
+        year: playlist.name.match(/\d{4}/)?.[0] || 'Unknown'
+      }))
+      .sort((a, b) => b.year - a.year); // Most recent first
+
+    res.json({ playlists: wrappedPlaylists });
+  } catch (error) {
+    console.error('Playlists fetch error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch playlists',
+      message: error.message 
+    });
+  }
+});
+
 // Add track to queue
 app.post('/api/queue', async (req, res) => {
   const { trackId } = req.body;
