@@ -10,8 +10,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.static(__dirname)); // Serve static files like passenger.html
-
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 // Store the driver's access token (in production, use a database)
 let driverAccessToken = null;
 let driverRefreshToken = null;
@@ -272,6 +272,8 @@ app.get('/api/status', (req, res) => {
 });
 
 // Helper function to format duration
+// Serve static files (passenger.html) - must come after API routes
+app.use(express.static(__dirname));
 function formatDuration(ms) {
   const minutes = Math.floor(ms / 60000);
   const seconds = Math.floor((ms % 60000) / 1000);
