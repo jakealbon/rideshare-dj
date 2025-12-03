@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Ride Tunes</title>
+  <title>Rideshare DJ</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -12,6 +12,8 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -23,11 +25,7 @@
     #root {
       width: 100%;
       height: 100vh;
-    }
-    @media (max-width: 768px) {
-      .desktop-layout {
-        display: none !important;
-      }
+      overflow: hidden;
     }
   </style>
 </head>
@@ -89,12 +87,28 @@
       const [showMobileMenu, setShowMobileMenu] = useState(false);
       const [showMobileQueue, setShowMobileQueue] = useState(false);
       const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+      const [topSongsPlaylists, setTopSongsPlaylists] = useState([]);
 
-      const WRAPPED_PLAYLISTS = {
-        '2024': '37i9dQZF1FoCZMBtkTSnst',
-        '2023': '37i9dQZF1Fa1IIVtEpGUcU',
-        '2022': '37i9dQZF1F0sijgNaJdgit'
-      };
+      // Load queue from localStorage on mount
+      useEffect(() => {
+        try {
+          const savedQueue = localStorage.getItem('rideshare-dj-queue');
+          if (savedQueue) {
+            setQueuedSongs(JSON.parse(savedQueue));
+          }
+        } catch (error) {
+          console.error('Failed to load queue from localStorage:', error);
+        }
+      }, []);
+
+      // Save queue to localStorage whenever it changes
+      useEffect(() => {
+        try {
+          localStorage.setItem('rideshare-dj-queue', JSON.stringify(queuedSongs));
+        } catch (error) {
+          console.error('Failed to save queue to localStorage:', error);
+        }
+      }, [queuedSongs]);
 
       useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -103,18 +117,26 @@
       }, []);
 
       useEffect(() => {
-        const fetchUserName = async () => {
+        const fetchUserData = async () => {
           try {
-            const response = await fetch(`${API_BASE_URL}/api/me`);
-            const data = await response.json();
-            if (data.displayName) {
-              setUserName(data.displayName.split(' ')[0]);
+            // Get user name
+            const meResponse = await fetch(`${API_BASE_URL}/api/me`);
+            const meData = await meResponse.json();
+            if (meData.displayName) {
+              setUserName(meData.displayName.split(' ')[0]);
+            }
+
+            // Get user's playlists to find Wrapped playlists
+            const playlistsResponse = await fetch(`${API_BASE_URL}/api/playlists`);
+            const playlistsData = await playlistsResponse.json();
+            if (playlistsData.playlists && playlistsData.playlists.length > 0) {
+              setTopSongsPlaylists(playlistsData.playlists);
             }
           } catch (error) {
-            console.error('Failed to fetch user name:', error);
+            console.error('Failed to fetch user data:', error);
           }
         };
-        fetchUserName();
+        fetchUserData();
       }, []);
 
       const loadChart = async (chart) => {
@@ -138,16 +160,15 @@
         setIsLoadingChart(false);
       };
 
-      const loadTopTracks = async (year) => {
-        setSelectedChart({ name: `${userName}'s Top Songs ${year}`, emoji: '⭐' });
+      const loadTopTracksPlaylist = async (playlist) => {
+        setSelectedChart({ name: playlist.name, emoji: '⭐', id: playlist.id });
         setActiveView('top-tracks');
         setIsLoadingChart(true);
         setSearchQuery('');
         setShowMobileMenu(false);
         
         try {
-          const playlistId = WRAPPED_PLAYLISTS[year];
-          const response = await fetch(`${API_BASE_URL}/api/playlist/${playlistId}?limit=50`);
+          const response = await fetch(`${API_BASE_URL}/api/playlist/${playlist.id}?limit=50`);
           const data = await response.json();
           
           if (data.error) {
@@ -157,7 +178,7 @@
           setChartTracks(data.tracks || []);
         } catch (error) {
           console.error('Failed to load top tracks:', error);
-          setFeedback({ message: `Couldn't load ${year} playlist`, type: 'error' });
+          setFeedback({ message: `Couldn't load ${playlist.year} playlist`, type: 'error' });
           setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
           setChartTracks([]);
         }
@@ -487,33 +508,42 @@
                   Home
                 </button>
 
-                <h3 style={{ fontSize: '12px', color: '#999', marginBottom: '12px', textTransform: 'uppercase' }}>
-                  {userName}'s Top Songs
-                </h3>
-                {['2024', '2023', '2022'].map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => loadTopTracks(year)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <span>⭐</span>
-                    Top Songs {year}
-                  </button>
-                ))}
+                {topSongsPlaylists.length > 0 && (
+                  <>
+                    <h3 style={{ fontSize: '12px', color: '#999', marginBottom: '12px', textTransform: 'uppercase' }}>
+                      {userName}'s Top Songs
+                    </h3>
+                    {topSongsPlaylists.map((playlist) => (
+                      <button
+                        key={playlist.id}
+                        onClick={() => loadTopTracksPlaylist(playlist)}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          marginBottom: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span>⭐</span>
+                        <span style={{
+                          flex: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>Top Songs {playlist.year}</span>
+                      </button>
+                    ))}
+                  </>
+                )}
 
                 <h3 style={{ fontSize: '12px', color: '#999', margin: '20px 0 12px', textTransform: 'uppercase' }}>
                   Playlists
@@ -562,7 +592,12 @@
                         }}
                       >
                         <span>{chart.emoji}</span>
-                        {chart.name}
+                        <span style={{
+                          flex: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>{chart.name}</span>
                       </button>
                     ))}
                   </div>
@@ -721,7 +756,7 @@
                         <path d="M9 18V5l12-2v13M9 18l-6 2V7l6-2M9 18l6-2m0-11v13m0-13l6-2v13"/>
                       </svg>
                     </div>
-                    <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '12px' }}>Welcome to Ride Tunes</h2>
+                    <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '12px' }}>Rideshare DJ</h2>
                     <p style={{ fontSize: '14px', color: '#999' }}>Search or browse playlists to queue songs</p>
                   </div>
                 ) : activeView === 'search' && searchResults.length > 0 ? (
@@ -732,7 +767,13 @@
                   </div>
                 ) : (activeView === 'chart' || activeView === 'top-tracks') && chartTracks.length > 0 ? (
                   <>
-                    <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '16px' }}>
+                    <h2 style={{ 
+                      fontSize: '20px', 
+                      fontWeight: '800', 
+                      marginBottom: '16px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word'
+                    }}>
                       {selectedChart?.emoji} {selectedChart?.name}
                     </h2>
                     <div style={{ display: 'grid', gap: '6px' }}>
@@ -758,7 +799,7 @@
         );
       }
 
-      // Desktop view (continues with existing 3-column layout but more compact)
+      // Desktop view
       return (
         <div style={{
           display: 'flex',
@@ -767,7 +808,7 @@
           color: '#fff',
           fontFamily: "'Outfit', sans-serif",
           overflow: 'hidden'
-        }} className="desktop-layout">
+        }}>
           <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
           
           {/* Feedback Toast */}
@@ -790,7 +831,7 @@
             </div>
           )}
 
-          {/* Left Sidebar - More Compact */}
+          {/* Left Sidebar */}
           <div style={{
             width: '240px',
             background: '#000',
@@ -824,7 +865,14 @@
                     <path d="M9 18V5l12-2v13M9 18l-6 2V7l6-2M9 18l6-2m0-11v13m0-13l6-2v13"/>
                   </svg>
                 </div>
-                <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>Ride Tunes</h1>
+                <h1 style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '800', 
+                  margin: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>Rideshare DJ</h1>
               </div>
 
               <button
@@ -851,43 +899,53 @@
               </button>
             </div>
 
-            <div style={{
-              padding: '12px 16px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-              <h3 style={{
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#999',
-                marginBottom: '10px',
-                textTransform: 'uppercase'
-              }}>{userName}'s Top Songs</h3>
-              {['2024', '2023', '2022'].map((year) => (
-                <button
-                  key={year}
-                  onClick={() => loadTopTracks(year)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    background: selectedChart?.name.includes(year) ? 'rgba(29, 185, 84, 0.15)' : 'transparent',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    marginBottom: '4px',
-                    textAlign: 'left'
-                  }}
-                >
-                  <span style={{ fontSize: '14px' }}>⭐</span>
-                  {year}
-                </button>
-              ))}
-            </div>
+            {topSongsPlaylists.length > 0 && (
+              <div style={{
+                padding: '12px 16px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <h3 style={{
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: '#999',
+                  marginBottom: '10px',
+                  textTransform: 'uppercase',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>{userName}'s Top Songs</h3>
+                {topSongsPlaylists.map((playlist) => (
+                  <button
+                    key={playlist.id}
+                    onClick={() => loadTopTracksPlaylist(playlist)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      background: selectedChart?.id === playlist.id ? 'rgba(29, 185, 84, 0.15)' : 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '4px',
+                      textAlign: 'left'
+                    }}
+                  >
+                    <span style={{ fontSize: '14px' }}>⭐</span>
+                    <span style={{
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>{playlist.year}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div style={{
               flex: 1,
@@ -1036,7 +1094,7 @@
                       <path d="M9 18V5l12-2v13M9 18l-6 2V7l6-2M9 18l6-2m0-11v13m0-13l6-2v13"/>
                     </svg>
                   </div>
-                  <h2 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '12px' }}>Welcome</h2>
+                  <h2 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '12px' }}>Rideshare DJ</h2>
                   <p style={{ fontSize: '14px', color: '#999' }}>Search or browse playlists on the left</p>
                 </div>
               ) : activeView === 'search' && searchResults.length > 0 ? (
@@ -1050,7 +1108,13 @@
                 </>
               ) : (activeView === 'chart' || activeView === 'top-tracks') && chartTracks.length > 0 ? (
                 <>
-                  <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '16px' }}>
+                  <h2 style={{ 
+                    fontSize: '22px', 
+                    fontWeight: '800', 
+                    marginBottom: '16px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word'
+                  }}>
                     {selectedChart?.emoji} {selectedChart?.name}
                   </h2>
                   <div style={{ display: 'grid', gap: '6px' }}>
@@ -1067,7 +1131,7 @@
             </div>
           </div>
 
-          {/* Right Sidebar - Queue (More Compact) */}
+          {/* Right Sidebar - Queue */}
           <div style={{
             width: '280px',
             background: '#000',
