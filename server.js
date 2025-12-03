@@ -26,10 +26,12 @@ const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3001/callback
 // Step 1: Driver authentication - redirect to Spotify login
 app.get('/auth/login', (req, res) => {
   const scopes = [
-    'user-read-playback-state',
-    'user-modify-playback-state',
-    'user-read-currently-playing'
-  ].join(' ');
+  'user-read-playback-state',
+  'user-modify-playback-state',
+  'user-read-currently-playing',
+  'playlist-read-private',
+  'playlist-read-collaborative'
+].join(' ');
 
   const authUrl = `https://accounts.spotify.com/authorize?` +
     `client_id=${CLIENT_ID}` +
