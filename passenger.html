@@ -34,48 +34,73 @@
       ? 'http://localhost:3001' 
       : window.location.origin;
 
-    // Popular songs and playlists by genre
-    const GENRES = [
-      { name: 'Pop Hits', query: 'top pop songs 2024', emoji: '🎵' },
-      { name: 'Hip-Hop', query: 'top hip hop 2024', emoji: '🔥' },
-      { name: 'Rock', query: 'rock hits', emoji: '🎸' },
-      { name: 'R&B', query: 'top rnb 2024', emoji: '💫' },
-      { name: 'Country', query: 'country hits', emoji: '🤠' },
-      { name: 'Electronic', query: 'edm hits', emoji: '⚡' }
+    // Spotify's official playlist IDs
+    const PLAYLISTS = {
+      topGlobal: '37i9dQZEVXbMDoHDwVN2tF', // Top 50 Global
+      topUSA: '37i9dQZEVXbLRQDuF5jeBp', // Top 50 USA
+      viral: '37i9dQZEVXbLiRSasKsNU9', // Viral 50 Global
+      popHits: '37i9dQZF1DXcBWIGoYBM5M', // Today's Top Hits
+      hipHop: '37i9dQZF1DX0XUsuxWHRQd', // RapCaviar
+      rock: '37i9dQZF1DWXRqgorJj26U', // Rock Classics
+      rnb: '37i9dQZF1DX4SBhb3fqCJd', // Are & Be
+      country: '37i9dQZF1DX1lVhptIYRda', // Hot Country
+      latin: '37i9dQZF1DX10zKzsJ2jva', // Viva Latino
+      electronic: '37i9dQZF1DX4dyzvuaRJ0n' // mint
+    };
+
+    const CHARTS = [
+      { name: 'Top 50 Global', id: 'topGlobal', emoji: '🌍', description: 'Most played songs worldwide' },
+      { name: 'Top 50 USA', id: 'topUSA', emoji: '🇺🇸', description: 'Most played in United States' },
+      { name: 'Viral Hits', id: 'viral', emoji: '🔥', description: 'Trending viral tracks' },
+      { name: 'Pop Hits', id: 'popHits', emoji: '🎵', description: 'Today\'s biggest pop songs' },
+      { name: 'Hip-Hop', id: 'hipHop', emoji: '🎤', description: 'Top rap and hip-hop' },
+      { name: 'Rock', id: 'rock', emoji: '🎸', description: 'Classic and modern rock' },
+      { name: 'R&B', id: 'rnb', emoji: '💫', description: 'Soul and R&B vibes' },
+      { name: 'Country', id: 'country', emoji: '🤠', description: 'Country favorites' },
+      { name: 'Latin', id: 'latin', emoji: '💃', description: 'Latin and reggaeton hits' },
+      { name: 'Electronic', id: 'electronic', emoji: '⚡', description: 'EDM and electronic' }
     ];
 
     const SpotifyQueueApp = () => {
       const [searchQuery, setSearchQuery] = useState('');
       const [searchResults, setSearchResults] = useState([]);
-      const [trendingTracks, setTrendingTracks] = useState([]);
+      const [chartTracks, setChartTracks] = useState([]);
       const [queuedSongs, setQueuedSongs] = useState([]);
       const [isSearching, setIsSearching] = useState(false);
-      const [isLoadingTrending, setIsLoadingTrending] = useState(true);
+      const [isLoadingChart, setIsLoadingChart] = useState(true);
       const [feedback, setFeedback] = useState({ message: '', type: '' });
-      const [activeView, setActiveView] = useState('trending'); // 'trending', 'search', 'genre'
-      const [selectedGenre, setSelectedGenre] = useState(null);
+      const [activeView, setActiveView] = useState('chart');
+      const [selectedChart, setSelectedChart] = useState(CHARTS[0]);
 
-      // Load trending songs on mount
+      // Load Top 50 Global on mount
       useEffect(() => {
-        loadTrending();
+        loadChart(CHARTS[0]);
       }, []);
 
-      const loadTrending = async () => {
-        setIsLoadingTrending(true);
+      const loadChart = async (chart) => {
+        setSelectedChart(chart);
+        setActiveView('chart');
+        setIsLoadingChart(true);
+        setSearchQuery(''); // Clear search
+        
         try {
-          const response = await fetch(`${API_BASE_URL}/api/search?q=top hits 2024`);
+          const playlistId = PLAYLISTS[chart.id];
+          const response = await fetch(`${API_BASE_URL}/api/playlist/${playlistId}?limit=40`);
           const data = await response.json();
-          setTrendingTracks(data.tracks || []);
+          setChartTracks(data.tracks || []);
         } catch (error) {
-          console.error('Failed to load trending:', error);
+          console.error('Failed to load chart:', error);
+          setFeedback({ message: 'Failed to load chart', type: 'error' });
+          setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
         }
-        setIsLoadingTrending(false);
+        
+        setIsLoadingChart(false);
       };
 
       const searchSpotify = async (query) => {
         if (!query.trim()) {
           setSearchResults([]);
-          setActiveView('trending');
+          setActiveView('chart');
           return;
         }
 
@@ -90,22 +115,6 @@
           console.error('Search failed:', error);
           setFeedback({ message: 'Search failed. Please try again.', type: 'error' });
           setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
-        }
-        
-        setIsSearching(false);
-      };
-
-      const loadGenre = async (genre) => {
-        setSelectedGenre(genre);
-        setActiveView('genre');
-        setIsSearching(true);
-        
-        try {
-          const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(genre.query)}`);
-          const data = await response.json();
-          setSearchResults(data.tracks || []);
-        } catch (error) {
-          console.error('Failed to load genre:', error);
         }
         
         setIsSearching(false);
@@ -133,29 +142,40 @@
 
           if (response.ok) {
             setQueuedSongs([...queuedSongs, track]);
-            setFeedback({ message: `Added "${track.name}" to queue!`, type: 'success' });
+            setFeedback({ message: `✓ Added to queue!`, type: 'success' });
           } else {
             throw new Error(data.error || 'Failed to add song');
           }
           
-          setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
+          setTimeout(() => setFeedback({ message: '', type: '' }), 2500);
         } catch (error) {
-          setFeedback({ message: error.message || 'Failed to add song. Make sure Spotify is playing!', type: 'error' });
-          setTimeout(() => setFeedback({ message: '', type: '' }), 4000);
+          setFeedback({ message: 'Make sure Spotify is playing!', type: 'error' });
+          setTimeout(() => setFeedback({ message: '', type: '' }), 3500);
         }
       };
 
       const isQueued = (trackId) => queuedSongs.some(song => song.id === trackId);
 
-      const TrackList = ({ tracks, title }) => (
+      const TrackList = ({ tracks, title, showRank = false }) => (
         <div>
           {title && (
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              marginBottom: '15px',
-              color: '#fff'
-            }}>{title}</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#fff',
+                marginBottom: '8px'
+              }}>{title}</h3>
+              {selectedChart.description && (
+                <p style={{
+                  fontSize: '14px',
+                  color: '#888',
+                  fontFamily: "'Space Mono', monospace"
+                }}>
+                  {selectedChart.description}
+                </p>
+              )}
+            </div>
           )}
           <div style={{
             background: 'rgba(255, 255, 255, 0.03)',
@@ -165,23 +185,35 @@
           }}>
             {tracks.map((track, index) => (
               <div
-                key={track.id}
+                key={`${track.id}-${index}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '15px 20px',
+                  padding: '12px 16px',
                   borderBottom: index < tracks.length - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
                   transition: 'background 0.2s ease'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
+                {showRank && (
+                  <div style={{
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    color: index < 3 ? '#1db954' : '#666',
+                    width: '35px',
+                    flexShrink: 0,
+                    fontFamily: "'Space Mono', monospace"
+                  }}>
+                    {index + 1}
+                  </div>
+                )}
                 <div style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '8px',
+                  width: '55px',
+                  height: '55px',
+                  borderRadius: '6px',
                   background: 'linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%)',
-                  marginRight: '15px',
+                  marginRight: '12px',
                   flexShrink: 0,
                   overflow: 'hidden'
                 }}>
@@ -191,9 +223,9 @@
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
-                    fontSize: '16px',
+                    fontSize: '15px',
                     fontWeight: '600',
-                    marginBottom: '4px',
+                    marginBottom: '3px',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
@@ -201,7 +233,7 @@
                     {track.name}
                   </div>
                   <div style={{
-                    fontSize: '14px',
+                    fontSize: '13px',
                     color: '#888',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -213,10 +245,16 @@
                 {isQueued(track.id) ? (
                   <div style={{
                     color: '#1db954',
-                    fontSize: '14px',
-                    fontWeight: '600'
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}>
-                    ✓ Queued
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Queued
                   </div>
                 ) : (
                   <button
@@ -225,13 +263,16 @@
                       background: 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)',
                       color: 'white',
                       border: 'none',
-                      padding: '10px 20px',
-                      borderRadius: '20px',
-                      fontSize: '14px',
+                      padding: '8px 18px',
+                      borderRadius: '18px',
+                      fontSize: '13px',
                       fontWeight: '600',
                       cursor: 'pointer',
-                      fontFamily: "'Outfit', sans-serif"
+                      fontFamily: "'Outfit', sans-serif",
+                      transition: 'transform 0.2s ease'
                     }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
                     Add
                   </button>
@@ -248,48 +289,48 @@
           background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
           color: '#ffffff',
           fontFamily: "'Outfit', sans-serif",
-          padding: '20px',
+          padding: '16px',
           paddingBottom: '80px'
         }}>
           <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
           
           {/* Header */}
           <div style={{
-            maxWidth: '600px',
+            maxWidth: '700px',
             margin: '0 auto',
-            paddingTop: '40px',
-            paddingBottom: '30px'
+            paddingTop: '30px',
+            paddingBottom: '25px'
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '15px',
-              marginBottom: '10px'
+              gap: '12px',
+              marginBottom: '8px'
             }}>
               <div style={{
-                width: '50px',
-                height: '50px',
+                width: '45px',
+                height: '45px',
                 background: 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)',
-                borderRadius: '12px',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 8px 20px rgba(29, 185, 84, 0.3)'
+                boxShadow: '0 6px 16px rgba(29, 185, 84, 0.3)'
               }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M9 18V5l12-2v13M9 18l-6 2V7l6-2M9 18l6-2m0-11v13m0-13l6-2v13"/>
                 </svg>
               </div>
               <div>
                 <h1 style={{
                   margin: 0,
-                  fontSize: '32px',
+                  fontSize: '28px',
                   fontWeight: '700',
                   letterSpacing: '-0.5px'
                 }}>Ride Tunes</h1>
                 <p style={{
                   margin: 0,
-                  fontSize: '14px',
+                  fontSize: '13px',
                   color: '#888',
                   fontFamily: "'Space Mono', monospace"
                 }}>Queue your favorite songs</p>
@@ -301,59 +342,60 @@
           {feedback.message && (
             <div style={{
               position: 'fixed',
-              top: '20px',
+              top: '16px',
               left: '50%',
               transform: 'translateX(-50%)',
               background: feedback.type === 'success' ? '#1db954' : '#ff4444',
               color: 'white',
-              padding: '15px 25px',
-              borderRadius: '30px',
+              padding: '12px 24px',
+              borderRadius: '25px',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+              gap: '8px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
               zIndex: 1000,
               animation: 'slideDown 0.3s ease-out',
-              maxWidth: '90%'
+              maxWidth: '90%',
+              fontSize: '14px'
             }}>
-              <span style={{ fontWeight: '600', fontSize: '14px' }}>{feedback.message}</span>
+              <span style={{ fontWeight: '600' }}>{feedback.message}</span>
             </div>
           )}
 
           {/* Main Content */}
           <div style={{
-            maxWidth: '600px',
+            maxWidth: '700px',
             margin: '0 auto'
           }}>
             {/* Search Bar */}
             <div style={{
               position: 'relative',
-              marginBottom: '30px'
+              marginBottom: '25px'
             }}>
               <div style={{
                 position: 'absolute',
-                left: '20px',
+                left: '16px',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 color: '#666'
               }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
               </div>
               <input
                 type="text"
-                placeholder="Search for songs or artists..."
+                placeholder="Search for any song or artist..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '18px 20px 18px 55px',
+                  padding: '16px 16px 16px 48px',
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '2px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '16px',
+                  borderRadius: '14px',
                   color: 'white',
-                  fontSize: '16px',
+                  fontSize: '15px',
                   outline: 'none',
                   transition: 'all 0.3s ease',
                   fontFamily: "'Outfit', sans-serif"
@@ -361,29 +403,29 @@
               />
             </div>
 
-            {/* Genre Pills */}
+            {/* Chart Pills */}
             <div style={{
               display: 'flex',
-              gap: '10px',
+              gap: '8px',
               overflowX: 'auto',
               marginBottom: '30px',
-              paddingBottom: '10px'
+              paddingBottom: '8px'
             }}>
-              {GENRES.map((genre) => (
+              {CHARTS.map((chart) => (
                 <button
-                  key={genre.name}
-                  onClick={() => loadGenre(genre)}
+                  key={chart.id}
+                  onClick={() => loadChart(chart)}
                   style={{
-                    background: selectedGenre?.name === genre.name 
+                    background: selectedChart.id === chart.id 
                       ? 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)'
                       : 'rgba(255, 255, 255, 0.05)',
                     color: 'white',
-                    border: selectedGenre?.name === genre.name 
+                    border: selectedChart.id === chart.id 
                       ? 'none'
                       : '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '12px 20px',
-                    borderRadius: '25px',
-                    fontSize: '14px',
+                    padding: '10px 16px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
@@ -391,16 +433,16 @@
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {genre.emoji} {genre.name}
+                  {chart.emoji} {chart.name}
                 </button>
               ))}
             </div>
 
             {/* Content Area */}
-            {isSearching || isLoadingTrending ? (
+            {isSearching || isLoadingChart ? (
               <div style={{
                 textAlign: 'center',
-                padding: '40px',
+                padding: '60px 20px',
                 color: '#666'
               }}>
                 <div style={{
@@ -415,32 +457,33 @@
                 <p>Loading...</p>
               </div>
             ) : activeView === 'search' && searchResults.length > 0 ? (
-              <TrackList tracks={searchResults} title="Search Results" />
+              <TrackList tracks={searchResults} title="Search Results" showRank={false} />
             ) : activeView === 'search' && searchQuery && searchResults.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '60px 20px',
                 color: '#666'
               }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ margin: '0 auto 15px', opacity: 0.3 }}>
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
                 <p style={{ fontSize: '16px' }}>No results found</p>
                 <p style={{ fontSize: '14px', marginTop: '5px' }}>Try a different search term</p>
               </div>
-            ) : activeView === 'genre' && searchResults.length > 0 ? (
-              <TrackList tracks={searchResults} title={`${selectedGenre?.emoji} ${selectedGenre?.name}`} />
             ) : (
-              <TrackList tracks={trendingTracks} title="🔥 Trending Now" />
+              <TrackList tracks={chartTracks} title={`${selectedChart.emoji} ${selectedChart.name}`} showRank={true} />
             )}
 
             {/* Footer */}
             <div style={{
               textAlign: 'center',
-              marginTop: '50px',
-              paddingBottom: '30px',
+              marginTop: '40px',
+              paddingBottom: '20px',
               color: '#666',
-              fontSize: '13px',
+              fontSize: '12px',
               fontFamily: "'Space Mono', monospace"
             }}>
-              <p>Powered by Spotify • Enjoy the ride 🎵</p>
+              <p>Powered by Spotify • {queuedSongs.length} songs queued 🎵</p>
             </div>
           </div>
 
@@ -460,9 +503,8 @@
               to { transform: rotate(360deg); }
             }
 
-            /* Hide scrollbar but keep functionality */
             div::-webkit-scrollbar {
-              height: 6px;
+              height: 5px;
             }
             
             div::-webkit-scrollbar-track {
