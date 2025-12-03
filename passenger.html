@@ -131,6 +131,12 @@
             const playlistsData = await playlistsResponse.json();
             if (playlistsData.playlists && playlistsData.playlists.length > 0) {
               setTopSongsPlaylists(playlistsData.playlists);
+              
+              // Auto-load the most recent Top Songs playlist (2024) on home screen
+              const mostRecent = playlistsData.playlists[0];
+              if (mostRecent) {
+                loadTopTracksPlaylist(mostRecent);
+              }
             }
           } catch (error) {
             console.error('Failed to fetch user data:', error);
@@ -260,11 +266,16 @@
       };
 
       const goHome = () => {
-        setActiveView('home');
-        setSelectedChart(null);
-        setSearchQuery('');
-        setChartTracks([]);
-        setSearchResults([]);
+        // Load the most recent Top Songs playlist instead of empty home
+        if (topSongsPlaylists.length > 0) {
+          loadTopTracksPlaylist(topSongsPlaylists[0]);
+        } else {
+          setActiveView('home');
+          setSelectedChart(null);
+          setSearchQuery('');
+          setChartTracks([]);
+          setSearchResults([]);
+        }
         setShowMobileMenu(false);
       };
 
@@ -651,22 +662,22 @@
                     <h3 style={{ fontSize: '18px', fontWeight: '800' }}>Queue</h3>
                     <p style={{ fontSize: '12px', color: '#999' }}>{queuedSongs.length} songs</p>
                   </div>
-                  {queuedSongs.length > 0 && (
-                    <button
-                      onClick={clearQueue}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'rgba(255, 68, 68, 0.1)',
-                        border: '1px solid rgba(255, 68, 68, 0.3)',
-                        borderRadius: '8px',
-                        color: '#ff4444',
-                        fontSize: '12px',
-                        fontWeight: '700'
-                      }}
-                    >
-                      Clear
-                    </button>
-                  )}
+                  <button
+                    onClick={clearQueue}
+                    style={{
+                      padding: '8px 16px',
+                      background: queuedSongs.length > 0 ? 'rgba(255, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                      border: queuedSongs.length > 0 ? '1px solid rgba(255, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: queuedSongs.length > 0 ? '#ff4444' : '#666',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: queuedSongs.length > 0 ? 'pointer' : 'default'
+                    }}
+                    disabled={queuedSongs.length === 0}
+                  >
+                    Clear
+                  </button>
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
@@ -1205,23 +1216,22 @@
                 <h3 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '2px' }}>Queue</h3>
                 <p style={{ fontSize: '11px', color: '#999' }}>{queuedSongs.length} songs</p>
               </div>
-              {queuedSongs.length > 0 && (
-                <button
-                  onClick={clearQueue}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'rgba(255, 68, 68, 0.1)',
-                    border: '1px solid rgba(255, 68, 68, 0.3)',
-                    borderRadius: '6px',
-                    color: '#ff4444',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear
-                </button>
-              )}
+              <button
+                onClick={clearQueue}
+                style={{
+                  padding: '6px 12px',
+                  background: queuedSongs.length > 0 ? 'rgba(255, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                  border: queuedSongs.length > 0 ? '1px solid rgba(255, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '6px',
+                  color: queuedSongs.length > 0 ? '#ff4444' : '#666',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: queuedSongs.length > 0 ? 'pointer' : 'default'
+                }}
+                disabled={queuedSongs.length === 0}
+              >
+                Clear
+              </button>
             </div>
 
             <div style={{
