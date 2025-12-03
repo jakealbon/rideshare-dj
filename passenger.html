@@ -34,18 +34,68 @@
       ? 'http://localhost:3001' 
       : window.location.origin;
 
-    // Popular search queries for different genres/charts
+    // Verified Spotify playlist IDs - using Today's Top Hits and other major playlists
     const CHARTS = [
-      { name: 'Top Hits 2024', query: 'top hits 2024', emoji: '🔥', description: 'Most popular songs right now' },
-      { name: 'Pop Hits', query: 'top pop 2024', emoji: '🎵', description: 'Biggest pop songs' },
-      { name: 'Hip-Hop', query: 'top rap hip hop 2024', emoji: '🎤', description: 'Top rap and hip-hop' },
-      { name: 'Rock', query: 'rock hits classic', emoji: '🎸', description: 'Rock favorites' },
-      { name: 'R&B', query: 'top rnb soul 2024', emoji: '💫', description: 'R&B and soul vibes' },
-      { name: 'Country', query: 'country hits 2024', emoji: '🤠', description: 'Country favorites' },
-      { name: 'Dance/EDM', query: 'edm dance hits', emoji: '⚡', description: 'Electronic and dance' },
-      { name: 'Latin', query: 'latin reggaeton 2024', emoji: '💃', description: 'Latin and reggaeton' },
-      { name: 'Chill Vibes', query: 'chill relaxing music', emoji: '😌', description: 'Relaxed background music' },
-      { name: 'Party Mix', query: 'party dance upbeat', emoji: '🎉', description: 'Upbeat party songs' }
+      { 
+        name: 'Today\'s Top Hits', 
+        id: '37i9dQZF1DXcBWIGoYBM5M', 
+        emoji: '🔥', 
+        description: 'The hottest tracks right now'
+      },
+      { 
+        name: 'Hot Hits Australia', 
+        id: '37i9dQZF1DXbLMw3ry7d7k', 
+        emoji: '🇦🇺', 
+        description: 'Australia\'s biggest hits'
+      },
+      { 
+        name: 'RapCaviar', 
+        id: '37i9dQZF1DX0XUsuxWHRQd', 
+        emoji: '🎤', 
+        description: 'New music from Drake, Future, and more'
+      },
+      { 
+        name: 'Hot Country', 
+        id: '37i9dQZF1DX1lVhptIYRda', 
+        emoji: '🤠', 
+        description: 'Today\'s top country'
+      },
+      { 
+        name: 'Rock Classics', 
+        id: '37i9dQZF1DWXRqgorJj26U', 
+        emoji: '🎸', 
+        description: 'Rock legends & epic songs'
+      },
+      { 
+        name: 'Viva Latino', 
+        id: '37i9dQZF1DX10zKzsJ2jva', 
+        emoji: '💃', 
+        description: 'Today\'s top Latin hits'
+      },
+      { 
+        name: 'Are & Be', 
+        id: '37i9dQZF1DX4SBhb3fqCJd', 
+        emoji: '💫', 
+        description: 'The best of R&B'
+      },
+      { 
+        name: 'mint', 
+        id: '37i9dQZF1DX4dyzvuaRJ0n', 
+        emoji: '⚡', 
+        description: 'Chill electronic vibes'
+      },
+      { 
+        name: 'Chill Hits', 
+        id: '37i9dQZF1DX4WYpdgoIcn6', 
+        emoji: '😌', 
+        description: 'Kick back to these mellow tracks'
+      },
+      { 
+        name: 'Party Playlist', 
+        id: '37i9dQZF1DXaXB8fQg7xif', 
+        emoji: '🎉', 
+        description: 'Party hits for good vibes'
+      }
     ];
 
     const SpotifyQueueApp = () => {
@@ -59,7 +109,7 @@
       const [activeView, setActiveView] = useState('chart');
       const [selectedChart, setSelectedChart] = useState(CHARTS[0]);
 
-      // Load top hits on mount
+      // Load Today's Top Hits on mount
       useEffect(() => {
         loadChart(CHARTS[0]);
       }, []);
@@ -71,13 +121,20 @@
         setSearchQuery(''); // Clear search
         
         try {
-          const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(chart.query)}`);
+          const response = await fetch(`${API_BASE_URL}/api/playlist/${chart.id}?limit=40`);
           const data = await response.json();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
           setChartTracks(data.tracks || []);
         } catch (error) {
           console.error('Failed to load chart:', error);
-          setFeedback({ message: 'Failed to load chart', type: 'error' });
+          setFeedback({ message: 'Failed to load playlist', type: 'error' });
           setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
+          // Fallback to empty
+          setChartTracks([]);
         }
         
         setIsLoadingChart(false);
@@ -175,7 +232,7 @@
                 padding: '40px 20px',
                 color: '#666'
               }}>
-                <p>No tracks found</p>
+                <p>No tracks available</p>
               </div>
             ) : (
               tracks.map((track, index) => (
@@ -191,6 +248,17 @@
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: index < 3 ? '#1db954' : '#666',
+                    width: '30px',
+                    flexShrink: 0,
+                    fontFamily: "'Space Mono', monospace",
+                    textAlign: 'center'
+                  }}>
+                    {index + 1}
+                  </div>
                   <div style={{
                     width: '55px',
                     height: '55px',
@@ -397,14 +465,14 @@
             }}>
               {CHARTS.map((chart) => (
                 <button
-                  key={chart.name}
+                  key={chart.id}
                   onClick={() => loadChart(chart)}
                   style={{
-                    background: selectedChart.name === chart.name 
+                    background: selectedChart.id === chart.id 
                       ? 'linear-gradient(135deg, #1db954 0%, #1ed760 100%)'
                       : 'rgba(255, 255, 255, 0.05)',
                     color: 'white',
-                    border: selectedChart.name === chart.name 
+                    border: selectedChart.id === chart.id 
                       ? 'none'
                       : '1px solid rgba(255, 255, 255, 0.1)',
                     padding: '10px 16px',
