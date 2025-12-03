@@ -174,7 +174,7 @@
         setShowMobileMenu(false);
         
         try {
-          const response = await fetch(`${API_BASE_URL}/api/playlist/${playlist.id}?limit=50`);
+          const response = await fetch(`${API_BASE_URL}/api/playlist/${playlist.id}?limit=20`);
           const data = await response.json();
           
           if (data.error) {
